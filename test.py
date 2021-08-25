@@ -14,6 +14,7 @@ s.connect(('127.0.0.1', port))
 s_manager = selectors.DefaultSelector()
 s_manager.register(s, selectors.EVENT_READ)
 start_time = time.time()
+bufer =""
 # print(type(s_manager.select(0)))
 while True:
     if time.time() - start_time > 5.0:
@@ -25,4 +26,4 @@ while True:
     if events != []:
         #handle events
         key, data = events[0]
-        print(key.fileobj.recv(256))
+        bufer = key.fileobj.recv(256).decode('utf-8')

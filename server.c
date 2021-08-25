@@ -172,7 +172,7 @@ int main() {
       }
       else //client send a req
       {
-
+        send(pfds[i].fd, "hello mate", 10, 0);
         printf("%s\n", buf);
       }
 
