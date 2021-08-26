@@ -15,7 +15,7 @@
 #define PORT "6000"
 #define width 1250
 #define height 650
-#define bufer_size 5
+#define bufer_size 10
 #define max_players 9
 
 struct player {
@@ -74,6 +74,20 @@ int get_listener(char domain[], char port[], struct addrinfo* hints)
     return sockfd;
 }
 
+void del_player(struct player players[], int fd, int *n_players)
+{
+  for (int i=0; i< *n_players; i++)
+  {
+    if (fd == players[i].id)
+    {
+      players[i].id = players[*n_players - 1].id;
+      players[*n_players - 1].id = 0;
+      (*n_players)--;
+      break;
+    }
+  }
+}
+
 void add_fd(struct pollfd *pfds[], int newfd, int *fd_count, int *fd_alloc_size)
 {
   if (*fd_count == *fd_alloc_size)
@@ -95,12 +109,13 @@ void del_fd(struct pollfd pfds[], int i, int *fd_count)
     (*fd_count)--;
 }
 
-void handle_message(struct pollfd pfds[], struct player players[],
+void handle_message(struct pollfd pfds[], struct player players[], int *n_players,
                     int index, int *fd_count)
 {
   char buf[bufer_size];
+  memset(buf, 0, bufer_size);
   int nbytes = recv(pfds[index].fd, buf, bufer_size, 0);
-
+  printf("%s\n", buf);
   if (nbytes <= 0)
   {
     // Got error or connection closed by client
@@ -116,15 +131,28 @@ void handle_message(struct pollfd pfds[], struct player players[],
 
     close(pfds[index].fd);
     del_fd(pfds, index, fd_count);
+    del_player(players, pfds[index].fd, n_players);
   }
   else //client send a req
   {
-    for (int i=0; i<max_players; i++)
+    for (int i=0; i<*n_players; i++)
     {
       send(players[i].id, buf, bufer_size, 0);
     }
   }
 
+}
+
+void add_player(struct player players[], int n_players, int id)
+//alerts every user that a new player entered the game
+{
+  char buf[2];
+  sprintf(buf, "%d", id);
+  printf("%s\n", buf);
+  for (int i=0; i<n_players; i++)
+  {
+    send(players[i].id, buf, 1, 0);
+  }
 }
 
 void main() {
@@ -187,9 +215,12 @@ void main() {
           else
           {
             add_fd(&pfds, newfd, &fd_count, &fd_alloc_size);
+
             players[n_players].id = newfd;
             n_players++;
-             
+            printf("new id %d\n", newfd);
+            add_player(players, n_players, newfd);
+
             printf("pollserver: new connection from %s on "
                 "socket %d\n",inet_ntop(remoteaddr.ss_family,
                     get_in_addr((struct sockaddr*)&remoteaddr),
@@ -199,7 +230,7 @@ void main() {
       else
       {
         //reads the message and sends the message to every client
-        handle_message(pfds, players, i, &fd_count);
+        handle_message(pfds, players, &n_players, i, &fd_count);
       }
     }
   }
