@@ -18,7 +18,7 @@ bufer =""
 # print(type(s_manager.select(0)))
 while True:
     if time.time() - start_time > 5.0:
-        s.send("pepino".encode())
+        s.send(input("say").encode())
         start_time = time.time()
 
     events = s_manager.select(0)
@@ -26,4 +26,5 @@ while True:
     if events != []:
         #handle events
         key, data = events[0]
-        bufer = key.fileobj.recv(256).decode('utf-8')
+        bufer = key.fileobj.recv(5).decode('utf-8')
+        print(bufer)

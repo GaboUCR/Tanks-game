@@ -13,6 +13,16 @@
 #include <poll.h>
 #define BACKLOG 10 //???? why is this needed
 #define PORT "6000"
+#define width 1250
+#define height 650
+#define bufer_size 5
+#define max_players 9
+
+struct player {
+  int id;
+  int x;
+  int y;
+};
 
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -85,15 +95,48 @@ void del_fd(struct pollfd pfds[], int i, int *fd_count)
     (*fd_count)--;
 }
 
+void handle_message(struct pollfd pfds[], struct player players[],
+                    int index, int *fd_count)
+{
+  char buf[bufer_size];
+  int nbytes = recv(pfds[index].fd, buf, bufer_size, 0);
 
+  if (nbytes <= 0)
+  {
+    // Got error or connection closed by client
+    if (nbytes == 0)
+    {
+      // Connection closed
+      printf("pollserver: socket %d hung up\n", pfds[index].fd);
+    }
+    else
+    {
+      perror("recv");
+    }
 
+    close(pfds[index].fd);
+    del_fd(pfds, index, fd_count);
+  }
+  else //client send a req
+  {
+    for (int i=0; i<max_players; i++)
+    {
+      send(players[i].id, buf, bufer_size, 0);
+    }
+  }
 
-int main() {
+}
+
+void main() {
+  struct player players[max_players];
+  int n_players = 0;
+  //client info
   struct sockaddr_storage remoteaddr;
   socklen_t addrlen;
-  char buf[256];
+  char buf[bufer_size];
   char remoteIP[INET6_ADDRSTRLEN];
 
+  //Server info
   int serverfd, newfd;
   struct addrinfo hints;
   memset(&hints, 0, sizeof hints);
@@ -102,6 +145,7 @@ int main() {
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags = AI_PASSIVE;
 
+  //polling initiation
   int fd_count = 0;
   int fd_alloc_size = 5;
   struct pollfd *pfds = malloc(sizeof *pfds * fd_alloc_size);
@@ -134,15 +178,18 @@ int main() {
         if (pfds[i].fd == serverfd)
         {
           addrlen = sizeof remoteaddr;
-          newfd = accept(serverfd,(struct sockaddr *)&remoteaddr,&addrlen);
+          newfd = accept(serverfd, (struct sockaddr *)&remoteaddr, &addrlen);
 
-          if (newfd == -1) {
+          if (newfd == -1)
+          {
               perror("accept");
           }
           else
           {
             add_fd(&pfds, newfd, &fd_count, &fd_alloc_size);
-
+            players[n_players].id = newfd;
+            n_players++;
+             
             printf("pollserver: new connection from %s on "
                 "socket %d\n",inet_ntop(remoteaddr.ss_family,
                     get_in_addr((struct sockaddr*)&remoteaddr),
@@ -151,35 +198,10 @@ int main() {
         }//handling new connections
       else
       {
-        int nbytes = recv(pfds[i].fd, buf, sizeof buf, 0);
-
-        int sender_fd = pfds[i].fd;
-
-        if (nbytes <= 0)
-        {
-            // Got error or connection closed by client
-            if (nbytes == 0) {
-                // Connection closed
-                printf("pollserver: socket %d hung up\n", sender_fd);
-            }
-            else
-            {
-                perror("recv");
-            }
-
-            close(pfds[i].fd);
-            del_fd(pfds, i, &fd_count);
+        //reads the message and sends the message to every client
+        handle_message(pfds, players, i, &fd_count);
       }
-      else //client send a req
-      {
-        send(pfds[i].fd, "hello mate", 10, 0);
-        printf("%s\n", buf);
-      }
-
-
-      }//check fds that are ready for reading
     }
   }
-
   }//infinite loop
 }
