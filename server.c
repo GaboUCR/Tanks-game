@@ -15,7 +15,7 @@
 #define PORT "6000"
 #define width 1250
 #define height 650
-#define bufer_size 10
+#define bufer_size 5
 #define max_players 9
 
 struct player {
@@ -137,7 +137,7 @@ void handle_message(struct pollfd pfds[], struct player players[], int *n_player
   {
     for (int i=0; i<*n_players; i++)
     {
-      send(players[i].id, buf, bufer_size, 0);
+      send(players[i].id, buf, 2, 0);
     }
   }
 
@@ -149,10 +149,22 @@ void add_player(struct player players[], int n_players, int id)
   char buf[2];
   sprintf(buf, "%d", id);
   printf("%s\n", buf);
+  char play_id[2];
+
+  send(id, buf, 1, 0);
+
   for (int i=0; i<n_players; i++)
   {
+    if (players[i].id == id)
+    {
+      continue;
+    }
     send(players[i].id, buf, 1, 0);
+
+    sprintf(play_id, "%d", players[i].id);
+    send(id, play_id, 1, 0);
   }
+  send(id, "d", 1, 0);
 }
 
 void main() {
