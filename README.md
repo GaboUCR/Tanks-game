@@ -1,11 +1,9 @@
 # Tanks-game
 Tanks is a multiplayer game in development. The server is made in C and the graphics in Pygame.
-
 I wanted to learn how to create a server using sockets. A game is a great and fun way of learning.
 
-Check this video to see what I've done so far.
 
-https://drive.google.com/file/d/1k_xD3LKCBGksbKH650d5w5J72p8PD1Dm/view?usp=sharing
+![Animation](https://user-images.githubusercontent.com/69367406/149843422-5949a63a-3886-4334-9a21-ab9f8aab1b1f.gif)
 
 ## How to run 
 
